@@ -15,6 +15,9 @@ export default function Nav() {
           <Link href="/beta" className="text-zinc-400 hover:text-white transition-colors">
             Beta
           </Link>
+          <Link href="/beta/matches" className="text-zinc-400 hover:text-white transition-colors">
+            Matches
+          </Link>
           <button
             disabled
             className="px-4 py-1.5 rounded bg-[#c9a84c]/20 text-[#c9a84c] text-sm font-medium border border-[#c9a84c]/30 cursor-not-allowed opacity-60"
