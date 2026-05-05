@@ -51,24 +51,44 @@ function getCurrentWeek(): { start: string; end: string; label: string } {
   }
 }
 
+function prevWeek(week: { start: string; end: string; label: string }) {
+  const fmt = (d: Date) =>
+    d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
+  const wed = new Date(week.start + 'T00:00:00Z')
+  wed.setUTCDate(wed.getUTCDate() - 7)
+  const tue = new Date(wed)
+  tue.setUTCDate(wed.getUTCDate() + 6)
+  return {
+    start: wed.toISOString().split('T')[0],
+    end: tue.toISOString().split('T')[0],
+    label: `${fmt(wed)} – ${fmt(tue)}, ${tue.getUTCFullYear()}`,
+  }
+}
+
 export default async function ScoresPage() {
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 
-  const week = getCurrentWeek()
+  async function fetchShows(start: string, end: string) {
+    const { data } = await supabase
+      .from('shows')
+      .select('id, name, show_type, air_date, scoring_multiplier')
+      .not('scraped_at', 'is', null)
+      .gte('air_date', start)
+      .lte('air_date', end)
+      .order('air_date', { ascending: true })
+    return (data ?? []) as ShowRow[]
+  }
 
-  // Fetch all shows in the current week that have been scraped
-  const { data: showsRaw } = await supabase
-    .from('shows')
-    .select('id, name, show_type, air_date, scoring_multiplier')
-    .not('scraped_at', 'is', null)
-    .gte('air_date', week.start)
-    .lte('air_date', week.end)
-    .order('air_date', { ascending: true })
-
-  const shows = (showsRaw ?? []) as ShowRow[]
+  // Try the current scoring window; if empty, fall back to the previous one
+  let week = getCurrentWeek()
+  let shows = await fetchShows(week.start, week.end)
+  if (shows.length === 0) {
+    week = prevWeek(week)
+    shows = await fetchShows(week.start, week.end)
+  }
 
   // Fetch all match participants for those shows
   let participants: ParticipantRow[] = []

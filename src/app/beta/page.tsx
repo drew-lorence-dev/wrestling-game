@@ -50,10 +50,17 @@ export default function BetaPage() {
         </Link>
         <Link
           href="/beta/scores"
-          className="flex flex-col gap-1 bg-[#1a1a1a] border border-[#2a2a2a] hover:border-[#c9a84c]/40 rounded-lg p-5 transition-colors sm:col-span-2"
+          className="flex flex-col gap-1 bg-[#1a1a1a] border border-[#2a2a2a] hover:border-[#c9a84c]/40 rounded-lg p-5 transition-colors"
         >
           <span className="text-lg font-bold text-white">Weekly Scores</span>
           <span className="text-sm text-zinc-500">See how your lineup scored on recent shows</span>
+        </Link>
+        <Link
+          href="/beta/matches"
+          className="flex flex-col gap-1 bg-[#1a1a1a] border border-[#2a2a2a] hover:border-[#c9a84c]/40 rounded-lg p-5 transition-colors"
+        >
+          <span className="text-lg font-bold text-white">Match History</span>
+          <span className="text-sm text-zinc-500">Browse scraped show results and cross-check data</span>
         </Link>
       </div>
 
