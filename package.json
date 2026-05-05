@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "seed:wrestlers": "tsx scripts/seed-wrestlers.ts",
-    "sync:roster": "tsx scripts/sync-roster.ts"
+    "sync:roster": "tsx scripts/sync-roster.ts",
+    "scrape:results": "tsx scripts/scrape-results.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.2",

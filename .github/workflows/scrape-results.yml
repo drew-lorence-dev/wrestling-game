@@ -1,0 +1,29 @@
+name: Scrape AEW Show Results
+
+on:
+  schedule:
+    # Thursday 6am UTC — after Dynamite (Wednesday 8pm ET)
+    - cron: '0 6 * * 4'
+    # Sunday 6am UTC — after Collision (Saturday 8pm ET)
+    - cron: '0 6 * * 0'
+  workflow_dispatch: # manual trigger from GitHub UI
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Scrape show results
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npm run scrape:results
