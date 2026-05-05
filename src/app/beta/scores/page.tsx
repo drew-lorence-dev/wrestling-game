@@ -29,24 +29,25 @@ interface WrestlerRow {
   gender: string
 }
 
-// Current scoring week: Monday–Sunday around the next lineup lock (Wed)
+// Scoring week runs Wed–Tue (anchored to Dynamite). Find the most recent Wednesday.
 function getCurrentWeek(): { start: string; end: string; label: string } {
   const now = new Date()
-  const day = now.getUTCDay() // 0=Sun, 1=Mon ... 6=Sat
-  // Find this week's Monday (go back to Monday)
-  const monday = new Date(now)
-  monday.setUTCDate(now.getUTCDate() - ((day + 6) % 7))
-  monday.setUTCHours(0, 0, 0, 0)
-  const sunday = new Date(monday)
-  sunday.setUTCDate(monday.getUTCDate() + 6)
+  const day = now.getUTCDay() // 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+
+  const wednesday = new Date(now)
+  wednesday.setUTCDate(now.getUTCDate() - ((day - 3 + 7) % 7))
+  wednesday.setUTCHours(0, 0, 0, 0)
+
+  const tuesday = new Date(wednesday)
+  tuesday.setUTCDate(wednesday.getUTCDate() + 6)
 
   const fmt = (d: Date) =>
     d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
 
   return {
-    start: monday.toISOString().split('T')[0],
-    end: sunday.toISOString().split('T')[0],
-    label: `${fmt(monday)} – ${fmt(sunday)}, ${sunday.getUTCFullYear()}`,
+    start: wednesday.toISOString().split('T')[0],
+    end: tuesday.toISOString().split('T')[0],
+    label: `${fmt(wednesday)} – ${fmt(tuesday)}, ${tuesday.getUTCFullYear()}`,
   }
 }
 

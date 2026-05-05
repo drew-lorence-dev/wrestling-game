@@ -171,8 +171,8 @@ async function processShow(
 }
 
 async function run() {
-  // Only store shows from today forward — no historical data
-  const cutoffDate = new Date().toISOString().split('T')[0]
+  const fromDateArg = process.argv.find(a => a.startsWith('--from-date='))
+  const cutoffDate = fromDateArg ? fromDateArg.split('=')[1] : new Date().toISOString().split('T')[0]
   console.log(`Building wrestler lookup... (only storing shows on or after ${cutoffDate})\n`)
   const lookup = await getWrestlerLookup()
   console.log(`Loaded ${lookup.size} wrestler name entries\n`)
