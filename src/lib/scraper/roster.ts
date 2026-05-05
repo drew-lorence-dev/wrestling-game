@@ -75,6 +75,14 @@ export async function scrapeRoster(): Promise<ScrapedWrestler[]> {
     const mensIdx = html.indexOf('MENS ROSTER')
     const womensIdx = html.indexOf('WOMENS ROSTER')
 
+    // Find the end of the WOMENS ROSTER section by locating the next h1 heading after it
+    // This prevents broadcast team / non-wrestler sections from being included
+    const afterWomens = womensIdx !== -1 ? html.slice(womensIdx + 'WOMENS ROSTER'.length) : ''
+    const nextH1Match = afterWomens.match(/<h1[\s>]/)
+    const womensEndIdx = nextH1Match?.index !== undefined
+      ? womensIdx + 'WOMENS ROSTER'.length + nextH1Match.index
+      : html.length
+
     // Extract all img tags with their positions and alt text
     const imgRegex = /<img[^>]+alt="([^"]+)"[^>]*src="([^"]+)"/g
     const imgSrcFirstRegex = /<img[^>]+src="([^"]+)"[^>]*alt="([^"]+)"/g
@@ -101,14 +109,12 @@ export async function scrapeRoster(): Promise<ScrapedWrestler[]> {
     for (const [pos, { alt, src }] of [...byPos.entries()].sort((a, b) => a[0] - b[0])) {
       if (!isWrestlerName(alt)) continue
 
-      // Determine gender by position relative to section headings
+      // Only include wrestlers within the MENS ROSTER and WOMENS ROSTER sections
+      if (mensIdx !== -1 && pos < mensIdx) continue        // before MENS ROSTER (champions section)
+      if (pos >= womensEndIdx) continue                    // after WOMENS ROSTER section ends
+
       let gender: 'male' | 'female' = 'male'
-      if (womensIdx !== -1 && pos > womensIdx) {
-        gender = 'female'
-      } else if (mensIdx !== -1 && pos < mensIdx) {
-        // Champions section — skip; they'll appear again in the gender sections
-        continue
-      }
+      if (womensIdx !== -1 && pos > womensIdx) gender = 'female'
 
       const name = toTitleCase(alt)
       const slug = toSlug(name)
