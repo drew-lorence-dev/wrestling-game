@@ -3,33 +3,33 @@ import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
 
-interface ShowRow {
-  id: string
+interface WrestlerEmbed {
   name: string
-  air_date: string
-  show_type: string
 }
 
-interface MatchRow {
+interface ParticipantEmbed {
+  wrestler_id: string
+  outcome: string
+  win_method: string | null
+  is_title_change: boolean
+  wrestlers: WrestlerEmbed | null
+}
+
+interface MatchEmbed {
   id: string
   show_id: string
   match_order: number
   match_type: string
   title_match: boolean
   title_name: string | null
+  match_participants: ParticipantEmbed[]
 }
 
-interface ParticipantRow {
-  match_id: string
-  wrestler_id: string
-  outcome: string
-  win_method: string | null
-  is_title_change: boolean
-}
-
-interface WrestlerRow {
+interface ShowRow {
   id: string
   name: string
+  air_date: string
+  show_type: string
 }
 
 interface BuiltParticipant {
@@ -86,54 +86,37 @@ export default async function MatchesPage() {
   if (shows.length > 0) {
     const showIds = shows.map(s => s.id)
 
+    // Single query: matches → participants → wrestlers via FK relationships
     const { data: matchesRaw } = await supabase
       .from('matches')
-      .select('id, show_id, match_order, match_type, title_match, title_name')
+      .select(`
+        id, show_id, match_order, match_type, title_match, title_name,
+        match_participants (
+          wrestler_id, outcome, win_method, is_title_change,
+          wrestlers ( name )
+        )
+      `)
       .in('show_id', showIds)
       .order('match_order', { ascending: true })
-    const matches = (matchesRaw ?? []) as MatchRow[]
 
-    let participants: ParticipantRow[] = []
-    if (matches.length > 0) {
-      const matchIds = matches.map(m => m.id)
-      const { data: pRaw } = await supabase
-        .from('match_participants')
-        .select('match_id, wrestler_id, outcome, win_method, is_title_change')
-        .in('match_id', matchIds)
-      participants = (pRaw ?? []) as ParticipantRow[]
-    }
-
-    const { data: wrestlersRaw } = await supabase
-      .from('wrestlers')
-      .select('id, name')
-    const wrestlerMap = new Map((wrestlersRaw ?? []).map((w: WrestlerRow) => [w.id, w.name]))
-
-    const participantsByMatch = new Map<string, ParticipantRow[]>()
-    for (const p of participants) {
-      const arr = participantsByMatch.get(p.match_id) ?? []
-      arr.push(p)
-      participantsByMatch.set(p.match_id, arr)
-    }
+    const matches = (matchesRaw ?? []) as unknown as MatchEmbed[]
 
     const matchesByShow = new Map<string, BuiltMatch[]>()
     for (const m of matches) {
-      const ps = participantsByMatch.get(m.id) ?? []
-      const winners = ps
+      const ps = m.match_participants ?? []
+      const winners: BuiltParticipant[] = ps
         .filter(p => p.outcome === 'win')
-        .map(p => ({ name: wrestlerMap.get(p.wrestler_id) ?? 'Unknown', win_method: p.win_method, is_title_change: p.is_title_change }))
-      const losers = ps
+        .map(p => ({ name: p.wrestlers?.name ?? 'Unknown', win_method: p.win_method, is_title_change: p.is_title_change }))
+      const losers: BuiltParticipant[] = ps
         .filter(p => p.outcome !== 'win')
-        .map(p => ({ name: wrestlerMap.get(p.wrestler_id) ?? 'Unknown', win_method: null, is_title_change: false }))
+        .map(p => ({ name: p.wrestlers?.name ?? 'Unknown', win_method: null, is_title_change: false }))
 
       const arr = matchesByShow.get(m.show_id) ?? []
       arr.push({ id: m.id, match_order: m.match_order, match_type: m.match_type, title_match: m.title_match, title_name: m.title_name, winners, losers })
       matchesByShow.set(m.show_id, arr)
     }
 
-    builtShows = shows.map(s => ({
-      ...s,
-      matches: matchesByShow.get(s.id) ?? [],
-    }))
+    builtShows = shows.map(s => ({ ...s, matches: matchesByShow.get(s.id) ?? [] }))
   }
 
   return (
@@ -183,10 +166,8 @@ export default async function MatchesPage() {
                         key={match.id}
                         className={`px-5 py-3.5 flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-3 ${i < show.matches.length - 1 ? 'border-b border-[#222]' : ''}`}
                       >
-                        {/* Match number */}
                         <span className="text-[10px] text-zinc-700 w-5 shrink-0 font-mono">#{match.match_order}</span>
 
-                        {/* Result */}
                         <div className="flex-1 min-w-0">
                           <span className="text-sm text-white font-medium">{winnerNames || '—'}</span>
                           <span className="text-xs text-zinc-500 mx-2">def.</span>
@@ -196,7 +177,6 @@ export default async function MatchesPage() {
                           )}
                         </div>
 
-                        {/* Badges */}
                         <div className="flex items-center gap-1.5 flex-wrap">
                           {match.title_match && (
                             <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-900/40 text-amber-400 whitespace-nowrap">

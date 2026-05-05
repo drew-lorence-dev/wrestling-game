@@ -90,24 +90,35 @@ export default async function ScoresPage() {
     shows = await fetchShows(week.start, week.end)
   }
 
-  // Fetch all match participants for those shows
+  // Fetch participants via two steps: matches for the shows → participants for those matches.
+  // Avoids the unreliable nested-resource filter (.in on an embedded column).
   let participants: ParticipantRow[] = []
   if (shows.length > 0) {
     const showIds = shows.map(s => s.id)
-    const { data: pRaw } = await supabase
-      .from('match_participants')
-      .select(`
-        wrestler_id,
-        outcome,
-        win_method,
-        is_title_change,
-        matches!inner (
-          title_match,
-          show_id
-        )
-      `)
-      .in('matches.show_id', showIds)
-    participants = (pRaw ?? []) as unknown as ParticipantRow[]
+
+    const { data: matchRowsRaw } = await supabase
+      .from('matches')
+      .select('id, show_id, title_match')
+      .in('show_id', showIds)
+    const matchRows = (matchRowsRaw ?? []) as { id: string; show_id: string; title_match: boolean }[]
+    const matchInfoMap = new Map(matchRows.map(m => [m.id, { show_id: m.show_id, title_match: m.title_match }]))
+
+    if (matchRows.length > 0) {
+      const matchIds = matchRows.map(m => m.id)
+      const { data: mpRaw } = await supabase
+        .from('match_participants')
+        .select('wrestler_id, outcome, win_method, is_title_change, match_id')
+        .in('match_id', matchIds)
+
+      participants = ((mpRaw ?? []) as { wrestler_id: string; outcome: string; win_method: string | null; is_title_change: boolean; match_id: string }[])
+        .map(p => ({
+          wrestler_id: p.wrestler_id,
+          outcome: p.outcome,
+          win_method: p.win_method,
+          is_title_change: p.is_title_change,
+          matches: matchInfoMap.get(p.match_id) ?? null,
+        }))
+    }
   }
 
   // Fetch all wrestlers (for names and images)
