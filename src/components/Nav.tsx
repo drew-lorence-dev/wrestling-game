@@ -8,7 +8,8 @@ export default function Nav() {
           <span className="text-[#c9a84c] font-bold text-lg tracking-widest uppercase">AEW</span>
           <span className="text-white font-semibold text-lg tracking-wide">Fantasy</span>
         </Link>
-        <nav className="flex items-center gap-6 text-sm">
+        {/* Desktop nav — bottom tab bar handles mobile */}
+        <nav className="hidden md:flex items-center gap-6 text-sm">
           <Link href="/roster" className="text-zinc-400 hover:text-white transition-colors">
             Roster
           </Link>
